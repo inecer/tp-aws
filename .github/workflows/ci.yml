@@ -1,48 +1,34 @@
-name: CI/CD for React Project
+name: Deploy to EC2
 
 on:
   push:
     branches:
-      - main  # Cette pipeline s'exécute lorsqu'il y a un push sur la branche 'main'
-  pull_request:
-    branches:
-      - main  # La pipeline est aussi déclenchée pour les pull requests vers la branche 'main'
+      - main
 
 jobs:
-  build:
-    runs-on: ubuntu-latest  # Utilisation d'un environnement Ubuntu pour les étapes
+  deploy:
+    runs-on: ubuntu-latest
 
     steps:
-      # Étape 1 : Vérifier le code du dépôt
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      # Étape 2 : Configurer Node.js
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '16'  # Remplacez par la version de Node.js que vous utilisez
-
-      # Étape 3 : Installer les dépendances
-      - name: Install dependencies
-        run: npm install
-
-      # Étape 4 : Exécuter les tests (si vous en avez)
-      - name: Run tests
-        run: npm test  # Remplacez cette ligne par la commande de tests si vous en avez
-
-      # Étape 5 : Construire le projet
-      - name: Build project
-        run: npm run build  # Remplacez par la commande de build si vous utilisez une autre configuration
-
-      # Étape 6 : Déployer sur EC2
-      - name: Deploy to EC2
-        env:
-          PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}  # Clé privée dans les secrets GitHub
-          EC2_HOST: ${{ secrets.EC2_HOST }}  # L'adresse IP de l'instance EC2 dans les secrets
-          EC2_USER: ${{ secrets.EC2_USER }}  # Utilisateur de l'instance EC2 (par exemple, 'ubuntu' ou 'ec2-user')
+      - name: Setup SSH connexion
         run: |
-          echo "$PRIVATE_KEY" > private_key.pem
-          chmod 600 private_key.pem
-          ssh -o StrictHostKeyChecking=no -i private_key.pem $EC2_USER@$EC2_HOST "cd /path/to/your/project && git pull && npm install && npm run build && sudo systemctl restart your-app-service"
-          rm private_key.pem
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" | base64 --decode > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to EC2 with docker
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            cd ${{ secrets.WORK_DIR }}
+            git pull origin ${{ secrets.MAIN_BRANCH }}
+            docker-compose -f docker-compose.yml down
+            docker system prune -af
+            docker image prune -af
+            docker-compose up -d --build
+          EOF
+      - name: Cleanup
+        run: rm -rf ~/.ssh
