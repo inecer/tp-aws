@@ -1,11 +1,25 @@
+# Définit la version du fichier Docker Compose
 version: '3.8'
 
+# On défini le service de l'app
 services:
+
+  # Service app qui va contenir notre application React
   app:
+
+    # Le nom du conteneur Docker que nous allons exécuter
     container_name: tp-aws
+
+    # Indique que Docker doit construire l'image à partir du Dockerfile situé dans la racine
     build: .
+
+    # Mappe le port 3000 du conteneur au port 3000 de l'hote
     ports:
       - "3000:3000"
+
+    # Définit la variable d'environnement NODE_ENV sur production pour activer le mode production dans React
     environment:
       - NODE_ENV=production
+
+    # Indique que le conteneur doit redémarrer automatiquement s'il échoue ou après un redémarrage de l'hote
     restart: always
