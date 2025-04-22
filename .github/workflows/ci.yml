@@ -13,12 +13,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Debug info
+        run: |
+          echo "SSH Host is set: ${{ secrets.SSH_HOST != '' }}"
+          echo "Work directory is set: ${{ secrets.WORK_DIR != '' }}"
+
       - name: Setup SSH connexion
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" | base64 --decode > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          # Pour debug, affichons l'hôte avant de l'utiliser
+          echo "Using host: ${{ secrets.SSH_HOST }}"
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Deploy to EC2 with docker
         run: |
@@ -30,5 +37,6 @@ jobs:
             docker image prune -af
             docker-compose up -d --build
           EOF
+
       - name: Cleanup
         run: rm -rf ~/.ssh
