@@ -1,4 +1,4 @@
-# Utiliser une image Node.js légère
+# Utiliser une image Node.js
 FROM node:16-alpine
 
 # Définir le répertoire de travail
