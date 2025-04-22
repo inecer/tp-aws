@@ -13,22 +13,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup SSH Keys and known_hosts
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+      - name: Debug info
+        run: |
+          echo "SSH Host is set: ${{ secrets.SSH_HOST != '' }}"
+          echo "Work directory is set: ${{ secrets.WORK_DIR != '' }}"
+
+      - name: Setup SSH connexion
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" | base64 --decode > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Test SSH Connection
-        run: |
-          ssh -o StrictHostKeyChecking=accept-new -T ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 'echo "SSH connection established successfully!"'
+          # Pour debug, affichons l'hôte avant de l'utiliser
+          echo "Using host: ${{ secrets.SSH_HOST }}"
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Deploy to EC2 with docker
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             cd ${{ secrets.WORK_DIR }}
             git pull origin ${{ secrets.MAIN_BRANCH }}
             docker-compose -f docker-compose.yml down
